@@ -63,5 +63,5 @@ func initDbWithRetries(conf *DbConfig, init initDbFunc, attempts int, wait backo
 		log.Printf("Unable to connect to database after %d tries", attempts)
 		return nil, err
 	}
-	return db, err
+	return db, nil
 }

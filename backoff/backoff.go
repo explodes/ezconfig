@@ -19,7 +19,7 @@ func (c constantStrategy) Duration(attempt int) time.Duration {
 	return time.Duration(c)
 }
 
-func NewConstantStrategy(wait time.Duration) Strategy {
+func Constant(wait time.Duration) Strategy {
 	return constantStrategy(wait)
 }
 
@@ -38,7 +38,7 @@ type exponentialStrategy struct {
 
 // NewExponentialBackoffStrategy creates a Strategy whose WaitDuration increases using the formula:
 // 	min(max, initial * factor^attempt)
-func NewExponentialBackoffStrategy(initial, max time.Duration, factor float64) Strategy {
+func Exponential(initial, max time.Duration, factor float64) Strategy {
 	return &exponentialStrategy{
 		initial: float64(initial),
 		max:     float64(max),
