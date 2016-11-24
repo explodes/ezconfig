@@ -13,10 +13,9 @@ package main
 import (
 	"time"
 	"log"
+	"github.com/explodes/ezconfig"
 	"github.com/explodes/ezconfig/backoff"
 	"github.com/explodes/ezconfig/opener"
-
-	"myproject/configreader"
 )
 
 const (
@@ -24,7 +23,8 @@ const (
 )
 
 func main() {
-        config := configreader.getConfig()
+        config := &MyConfig{}
+        ezconfig.ReadConfig("local.conf", &config)
         connections := opener.New().
             WithRetry(connectionRetries, backoff.Exponential(10*time.Millisecond, 1*time.Second, 2)).
             WithDatabase(&config.DbConfig).
