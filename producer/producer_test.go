@@ -4,6 +4,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"github.com/explodes/ezconfig/backoff"
 )
 
 func TestInitProducer_dummy(t *testing.T) {
@@ -17,7 +18,7 @@ func TestInitProducer_dummy(t *testing.T) {
 		},
 	}
 
-	producer, err := InitProducer(conf, 0, 0)
+	producer, err := InitProducer(conf, 0, backoff.Constant(1))
 	if err != nil {
 		t.Fatalf("Error creating dummy producer: %v", err)
 	}
@@ -69,7 +70,7 @@ func TestInitProducerWithRetries(t *testing.T) {
 		return nil, errors.New("Failed")
 	}
 
-	val, err := initProducerWithRetries(&ProducerConfig{}, init, 10, 0)
+	val, err := initProducerWithRetries(&ProducerConfig{}, init, 10, backoff.Constant(1))
 	if err != nil {
 		t.Fatalf("Error with factory: %v", err)
 	}

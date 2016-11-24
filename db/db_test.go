@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"github.com/explodes/ezconfig/backoff"
 )
 
 func TestInitProducer_sqlitedummy(t *testing.T) {
@@ -15,12 +16,12 @@ func TestInitProducer_sqlitedummy(t *testing.T) {
 		},
 	}
 
-	db, err := InitDb(conf, 0, 0)
+	db, err := InitDb(conf, 0, backoff.Constant(1))
 	if err != nil {
-		t.Fatalf("Error creating dummy producer: %v", err)
+		t.Fatalf("Error creating dummy database: %v", err)
 	}
 	if db == nil {
-		t.Fatal("Received nil producer")
+		t.Fatal("Received nil database")
 	}
 	db.Close()
 }
@@ -67,12 +68,12 @@ func TestInitProducerWithRetries(t *testing.T) {
 		return nil, errors.New("Failed")
 	}
 
-	val, err := initDbWithRetries(&DbConfig{}, init, 10, 0)
+	val, err := initDbWithRetries(&DbConfig{}, init, 10, backoff.Constant(1))
 	if err != nil {
 		t.Fatalf("Error with factory: %v", err)
 	}
 	if val != dummy {
-		t.Fatalf("Unexpected producer: %v", val)
+		t.Fatalf("Unexpected database: %v", val)
 	}
 	if attempts != 3 {
 		t.Fatalf("Unexpected number of attempts: %d", attempts)
