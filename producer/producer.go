@@ -10,7 +10,7 @@ import (
 
 type Producer interface {
 	Publish(topic string, message string)
-	Close()
+	Close() error
 }
 
 type initProducerFunc func(conf *ProducerConfig) (Producer, error)

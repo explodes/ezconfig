@@ -7,6 +7,7 @@ import (
 	"github.com/explodes/ezconfig/backoff"
 	"github.com/explodes/ezconfig/db"
 	"github.com/explodes/ezconfig/producer"
+	"io"
 )
 
 type Opener struct {
@@ -17,10 +18,9 @@ type Opener struct {
 	backoff        backoff.Strategy
 }
 
-type ConnectionResult struct {
+type Connections struct {
 	DB       *sql.DB
 	Producer producer.Producer
-	Err      error
 }
 
 func New() *Opener {
@@ -43,16 +43,17 @@ func (co *Opener) WithProducer(config *producer.ProducerConfig) *Opener {
 	return co
 }
 
-func (co *Opener) Connect() *ConnectionResult {
+func (co *Opener) Connect() (*Connections, error) {
 
 	wg := sync.WaitGroup{}
-	result := &ConnectionResult{}
+	result := &Connections{}
+	errs := &lastError{}
 
 	if co.dbConfig != nil {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			co.connectDb(result)
+			errs.Record(co.connectDb(result))
 		}()
 	}
 
@@ -60,29 +61,75 @@ func (co *Opener) Connect() *ConnectionResult {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			co.connectBroker(result)
+			errs.Record(co.connectBroker(result))
 		}()
 	}
 
 	wg.Wait()
 
-	return result
+	return result, errs.err
 }
 
-func (co *Opener) connectDb(result *ConnectionResult) {
+func (co *Opener) connectDb(result *Connections) error {
 	database, err := db.InitDb(co.dbConfig, co.retries, co.backoff)
 	if err != nil {
-		result.Err = err
+		return err
 	} else {
 		result.DB = database
+		return nil
 	}
 }
 
-func (co *Opener) connectBroker(result *ConnectionResult) {
+func (co *Opener) connectBroker(result *Connections) error {
 	prod, err := producer.InitProducer(co.producerConfig, co.retries, co.backoff)
 	if err != nil {
-		result.Err = err
+		return err
 	} else {
 		result.Producer = prod
+		return nil
+	}
+}
+
+func (c *Connections) Close() error {
+	return CloseAll(c.DB, c.Producer)
+}
+
+func CloseAll(closers ...io.Closer) error {
+	wg := sync.WaitGroup{}
+
+	errs := &lastError{}
+
+	closeAndRecordError := func(c io.Closer) {
+		if c == nil {
+			return
+		}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			errs.Record(c.Close())
+		}()
+	}
+
+	for _, closer := range closers {
+		closeAndRecordError(closer)
+	}
+
+	wg.Wait()
+	return errs.err
+}
+
+type lastError struct {
+	sync.Mutex
+	err error
+}
+
+func (e *lastError) Record(err error) {
+	if err == nil {
+		return
+	}
+	e.Lock()
+	defer e.Unlock()
+	if e.err == nil {
+		e.err = err
 	}
 }

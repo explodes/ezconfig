@@ -48,6 +48,7 @@ func (k kafkaProducer) Publish(topic string, message string) {
 	}
 }
 
-func (k kafkaProducer) Close() {
+func (k kafkaProducer) Close() error {
 	k.p.Close()
+	return nil
 }

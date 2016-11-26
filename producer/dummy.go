@@ -20,5 +20,6 @@ func (d dummyProducer) Publish(topic string, message string) {
 	log.Printf("publish %q -> %s", topic, message)
 }
 
-func (d dummyProducer) Close() {
+func (d dummyProducer) Close() error {
+	return nil
 }
