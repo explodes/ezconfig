@@ -43,7 +43,7 @@ type Config struct {
 	Server ServerConfig
 }
 
-type Context struct {
+type App struct {
 	config   *Config
 	db       *sql.DB
 	producer producer.Producer
@@ -53,13 +53,13 @@ func init() {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.Lmicroseconds)
 }
 
-func contextWrap(f func(context *Context, req *jsonserv.Request, res *jsonserv.Response)) jsonserv.View {
-	return func(ctx interface{}, req *jsonserv.Request, res *jsonserv.Response) {
-		f(ctx.(*Context), req, res)
+func appWrap(f func(app *App, req *jsonserv.Request, res *jsonserv.Response)) jsonserv.View {
+	return func(app interface{}, req *jsonserv.Request, res *jsonserv.Response) {
+		f(app.(*App), req, res)
 	}
 }
 
-func readConfig() *Context {
+func readConfig() *App {
 	config := &Config{}
 	err := ezconfig.ReadConfig(*configFilePath, config)
 	if err != nil {
@@ -76,7 +76,7 @@ func readConfig() *Context {
 		log.Fatalf("Unable to connect: %v", connections.Err)
 	}
 
-	return &Context{
+	return &App{
 		config:   config,
 		db:       connections.DB,
 		producer: connections.Producer,
@@ -84,8 +84,8 @@ func readConfig() *Context {
 }
 
 func main() {
-	ctx := readConfig()
-	config := ctx.config
+	app := readConfig()
+	config := app.config
 
 	bind := fmt.Sprintf("%s:%d", config.Server.Host, config.Server.Port)
 	log.Printf("Serving on %s", bind)
@@ -94,28 +94,28 @@ func main() {
 	if config.Server.LogRequests > 0 {
 		server.AddMiddleware(jsonserv.NewLoggingMiddleware(config.Server.LogRequests > 1))
 	}
-	err := server.SetContext(ctx).
+	err := server.SetApp(app).
 		AddMiddleware(jsonserv.NewMaxRequestSizeMiddleware(config.Server.MaxRequestSize)).
 		AddMiddleware(jsonserv.NewDebugFlagMiddleware(config.Server.Debug)).
-		AddRoute(http.MethodGet, "Index", "/", contextWrap(indexView)).
-		AddRoute(http.MethodGet, "Error", "/error", contextWrap(errorView)).
+		AddRoute(http.MethodGet, "Index", "/", appWrap(indexView)).
+		AddRoute(http.MethodGet, "Error", "/error", appWrap(errorView)).
 		Serve(bind)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func indexView(ctx *Context, req *jsonserv.Request, res *jsonserv.Response) {
+func indexView(app *App, req *jsonserv.Request, res *jsonserv.Response) {
 	res.Ok(map[string]interface{}{
 		"hello":    "Hello, World!",
 		"world":    true,
-		"database": ctx.db,
-		"producer": ctx.producer,
+		"database": app.db,
+		"producer": app.producer,
 		"request":  req.String(),
 	})
-	ctx.producer.Publish("test", "hello_world")
+	app.producer.Publish("test", "hello_world")
 }
 
-func errorView(ctx *Context, req *jsonserv.Request, res *jsonserv.Response) {
+func errorView(app *App, req *jsonserv.Request, res *jsonserv.Response) {
 	res.Error(errors.New("failed!!!"))
 }
