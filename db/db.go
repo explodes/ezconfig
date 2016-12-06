@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/explodes/ezconfig/backoff"
+	"github.com/explodes/ezconfig/db/registry"
 )
 
 type initDbFunc func(conf *DbConfig) (*sql.DB, error)
@@ -29,14 +30,11 @@ func InitDb(conf *DbConfig, attempts int, wait backoff.Strategy) (*sql.DB, error
 }
 
 func determineFactory(databaseType string) (validateConfigFunc, initDbFunc, error) {
-	switch databaseType {
-	case "sqlite3":
-		return sqliteValidateConfig, sqliteInitDb, nil
-	case "postgres":
-		return postgresValidateConfig, postgresInitDb, nil
-	default:
-		return nil, nil, fmt.Errorf("Unsupported database type %q", databaseType)
+	factory, ok := registry.Get(databaseType)
+	if !ok {
+		return nil, nil, fmt.Errorf("Invalid database type %s (was the database type imported?)", databaseType)
 	}
+	return factory.Validate.(validateConfigFunc), factory.Init.(initDbFunc), nil
 }
 
 func initDbWithRetries(conf *DbConfig, init initDbFunc, attempts int, wait backoff.Strategy) (*sql.DB, error) {
@@ -48,12 +46,12 @@ func initDbWithRetries(conf *DbConfig, init initDbFunc, attempts int, wait backo
 	for attempt := 0; attempt < attempts; attempt++ {
 		db, err = init(conf)
 		if err != nil {
-			log.Printf("Unable to connect to database (attempt %d of %d): %v", attempt+1, attempts, err)
+			log.Printf("Unable to connect to database (attempt %d of %d): %v", attempt + 1, attempts, err)
 			time.Sleep(wait.Duration(attempt))
 			continue
 		}
 		if err = db.Ping(); err != nil {
-			log.Printf("Unable to connect to database (attempt %d of %d) (%v)", attempt+1, attempts, err)
+			log.Printf("Unable to connect to database (attempt %d of %d) (%v)", attempt + 1, attempts, err)
 			time.Sleep(wait.Duration(attempt))
 			continue
 		}
