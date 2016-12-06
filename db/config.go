@@ -5,13 +5,14 @@ type DbConfig struct {
 }
 
 type Host struct {
-	Type     string // only sqlite3, postgres is supported
-	Host     string // file, or :memory:, for sqlite3
-	Port     int
-	DbName   string `toml:"dbname"`
-	User     string
-	Password string
-	Ssl      string
+	Type           string // only sqlite3, postgres is supported
+	Host           string // file, or :memory:, for sqlite3
+	Port           int
+	DbName         string `toml:"dbname"`
+	User           string
+	Password       string
+	Ssl            string
+	MaxConnections int `toml:"max_connections"`
 }
 
 func (config *DbConfig) GetDbConfig() *DbConfig {
