@@ -20,7 +20,7 @@ func TestDetermineFactory(t *testing.T) {
 	if sf1.Pointer() != sf2.Pointer() {
 		t.Fatal("Unexpected init function")
 	}
-	sf1 = reflect.ValueOf(validateDb)
+	sf1 = reflect.ValueOf(validateConfig)
 	sf2 = reflect.ValueOf(factory.Validate)
 	if sf1.Pointer() != sf2.Pointer() {
 		t.Fatal("Unexpected validate function")

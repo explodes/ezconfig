@@ -5,7 +5,7 @@ Connect to databases and brokers using a well defined configuration structure.
 
 ## Example
 
-*See /sample/sample.go for usage in practice*
+*See /sample/sample.go for a more thorough example*
 
 ```go
 package main
@@ -16,11 +16,12 @@ import (
 	"github.com/explodes/ezconfig"
 	"github.com/explodes/ezconfig/backoff"
 	"github.com/explodes/ezconfig/opener"
-	_ "github.com/explodes/ezconfig/db/pg"
-	_ "github.com/explodes/ezconfig/producer/kafka"
+	_ "github.com/explodes/ezconfig/db/pg" // allow postgres connections
+	_ "github.com/explodes/ezconfig/producer/kafka" // allow kafka connections
 )
 
 const (
+        // number of attempts to make to connect to each service
         connectionRetries = 10
 )
 

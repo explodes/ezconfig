@@ -28,6 +28,11 @@ type DbHost struct {
 	MaxConnections int `toml:"max_connections"`
 }
 
+// Address builds a host:port string
+func (b *DbHost) Address() string {
+	return fmt.Sprintf("%s:%d", b.Host, b.Port)
+}
+
 // ProducerConfig is config in the following format:
 //   [producer]
 //   type = "dummy"
@@ -51,6 +56,7 @@ type ProducerHost struct {
 	Port int
 }
 
+// Address builds a host:port string
 func (b *ProducerHost) Address() string {
 	return fmt.Sprintf("%s:%d", b.Host, b.Port)
 }

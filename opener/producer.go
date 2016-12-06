@@ -11,30 +11,22 @@ import (
 	"github.com/explodes/ezconfig/producer/registry"
 )
 
+// InitProducer establishes a connection to a Producer with the given strategy
 func InitProducer(conf *ezconfig.ProducerConfig, attempts int, wait backoff.Strategy) (producer.Producer, error) {
-
 	// determine type
-	validate, init, err := determineProducerFactory(conf.Settings.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	// validate
-	if err := validate(conf); err != nil {
-		return nil, err
-	}
-
-	return initProducerWithRetries(conf, init, attempts, wait)
-}
-
-func determineProducerFactory(producerType string) (registry.ValidateFunc, registry.InitFunc, error) {
-	factory, ok := registry.Get(producerType)
+	factory, ok := registry.Get(conf.Settings.Type)
 	if !ok {
-		return nil, nil, fmt.Errorf("Invalid producer type %s (was the database type imported?)", producerType)
+		return nil, fmt.Errorf("Invalid producer type %s (was the producer type imported?)", conf.Settings.Type)
 	}
-	return factory.Validate, factory.Init, nil
+	// validate
+	if err := factory.Validate(conf); err != nil {
+		return nil, err
+	}
+	return initProducerWithRetries(conf, factory.Init, attempts, wait)
 }
 
+// initProducerWithRetries attempts to connect to a producer a given number of times.
+// If attempts is less than or equal to one, only one attempt will be made.
 func initProducerWithRetries(conf *ezconfig.ProducerConfig, init registry.InitFunc, attempts int, wait backoff.Strategy) (producer.Producer, error) {
 	if attempts <= 0 {
 		attempts = 1

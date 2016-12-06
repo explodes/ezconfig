@@ -15,12 +15,14 @@ type Strategy interface {
 // ConstantStrategy always waits a set amount of time
 type constantStrategy time.Duration
 
-func (c constantStrategy) Duration(attempt int) time.Duration {
-	return time.Duration(c)
-}
-
+// Constant returns a backoff strategy that always waits same duration
 func Constant(wait time.Duration) Strategy {
 	return constantStrategy(wait)
+}
+
+// Duration returns the predetermined constant duration
+func (c constantStrategy) Duration(attempt int) time.Duration {
+	return time.Duration(c)
 }
 
 // ExponentialBackoffStrategy increases the wait period exponentially using the formula:
@@ -46,6 +48,7 @@ func Exponential(initial, max time.Duration, factor float64) Strategy {
 	}
 }
 
+// Duration returns the expontentially increasing duration
 func (c *exponentialStrategy) Duration(attempt int) time.Duration {
 	wait := math.Pow(c.factor, float64(attempt-1))
 	wait = math.Min(wait*c.initial, c.max)

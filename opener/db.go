@@ -11,30 +11,23 @@ import (
 	"github.com/explodes/ezconfig/db/registry"
 )
 
+// InitDb establishes a connection to a database with the given strategy
 func InitDb(conf *ezconfig.DbConfig, attempts int, wait backoff.Strategy) (*sql.DB, error) {
-
 	// determine type
-	validate, init, err := determineDbFactory(conf.Database.Type)
-	if err != nil {
-		return nil, err
-	}
-
-	// validate
-	if err := validate(conf); err != nil {
-		return nil, err
-	}
-
-	return initDbWithRetries(conf, init, attempts, wait)
-}
-
-func determineDbFactory(databaseType string) (registry.ValidateFunc, registry.InitFunc, error) {
-	factory, ok := registry.Get(databaseType)
+	factory, ok := registry.Get(conf.Database.Type)
 	if !ok {
-		return nil, nil, fmt.Errorf("Invalid database type %s (was the database type imported?)", databaseType)
+		return nil, fmt.Errorf("Invalid database type %s (was the database type imported?)", conf.Database.Type)
 	}
-	return factory.Validate, factory.Init, nil
+	// validate
+	if err := factory.Validate(conf); err != nil {
+		return nil, err
+	}
+	return initDbWithRetries(conf, factory.Init, attempts, wait)
 }
 
+// initDbWithRetries attempts to connect to a database a given number of times.
+// If attempts is less than or equal to one, only one attempt will be made.
+// A "Ping" is sent to the database to test the connection.
 func initDbWithRetries(conf *ezconfig.DbConfig, init registry.InitFunc, attempts int, wait backoff.Strategy) (*sql.DB, error) {
 	if attempts <= 0 {
 		attempts = 1
