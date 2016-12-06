@@ -16,22 +16,29 @@ import (
 	"github.com/explodes/ezconfig"
 	"github.com/explodes/ezconfig/backoff"
 	"github.com/explodes/ezconfig/opener"
+	_ "github.com/explodes/ezconfig/db/pg"
+	_ "github.com/explodes/ezconfig/producer/kafka"
 )
 
 const (
         connectionRetries = 10
 )
 
+type MyConfig struct {
+	ezconfig.ProducerConfig
+	ezconfig.DbConfig
+}
+
 func main() {
         config := &MyConfig{}
         ezconfig.ReadConfig("local.conf", &config)
-        connections := opener.New().
+        connections, err := opener.New().
             WithRetry(connectionRetries, backoff.Exponential(10*time.Millisecond, 1*time.Second, 2)).
             WithDatabase(&config.DbConfig).
             WithProducer(&config.ProducerConfig).
             Connect()
-        if connections.Err != nil {
-                log.Fatalf("Error connecting, aborting: %v", connections.Err)
+        if err != nil {
+                log.Fatalf("Error connecting, aborting: %v", err)
         }
         connections.DB.Exec(`SELECT "Hello, world!"`)
         connections.Producer.Publish("hello", "world")

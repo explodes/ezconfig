@@ -1,4 +1,4 @@
-package producer
+package kafka
 
 import (
 	"errors"
@@ -6,29 +6,40 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/explodes/ezconfig"
+	"github.com/explodes/ezconfig/producer"
+	"github.com/explodes/ezconfig/producer/registry"
 )
 
-func kafkaValidateConfig(conf *ProducerConfig) error {
+const (
+	kafkaProducerType = "kafka"
+)
+
+func init() {
+	registry.Register(kafkaProducerType, initProducer, validateConfig)
+}
+
+func validateConfig(conf *ezconfig.ProducerConfig) error {
 	if conf.Hosts == nil || len(conf.Hosts) == 0 {
 		return errors.New("Invalid producer configration: No [[producers]] entry in configuration")
 	}
 	return nil
 }
 
-func kafkaInitProducer(conf *ProducerConfig) (Producer, error) {
+func initProducer(conf *ezconfig.ProducerConfig) (producer.Producer, error) {
 	config := sarama.NewConfig()
 	config.Producer.Retry.Max = conf.Settings.Retries
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	producers := []string{}
-	for _, producer := range conf.Hosts {
-		producers = append(producers, producer.Address())
+	for _, p := range conf.Hosts {
+		producers = append(producers, p.Address())
 	}
-	producer, err := sarama.NewAsyncProducer(producers, config)
+	p, err := sarama.NewAsyncProducer(producers, config)
 	if err != nil {
 		return nil, err
 	}
 	kafka := kafkaProducer{
-		p:    producer,
+		p:    p,
 		conf: conf,
 	}
 	return &kafka, nil
@@ -36,7 +47,7 @@ func kafkaInitProducer(conf *ProducerConfig) (Producer, error) {
 
 type kafkaProducer struct {
 	p    sarama.AsyncProducer
-	conf *ProducerConfig
+	conf *ezconfig.ProducerConfig
 }
 
 func (k kafkaProducer) Publish(topic string, message string) {

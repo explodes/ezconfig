@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/explodes/ezconfig/db"
-	_ "github.com/lib/pq"
+	"github.com/explodes/ezconfig"
 	"github.com/explodes/ezconfig/db/registry"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -15,14 +15,14 @@ const (
 )
 
 func init() {
-	registry.Register(pgDbType, postgresInitDb, postgresValidateConfig)
+	registry.Register(pgDbType, initDb, validateDb)
 }
 
-func getPostgresConnectionsString(conf *db.DbConfig) string {
+func getPostgresConnectionsString(conf *ezconfig.DbConfig) string {
 	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", conf.Database.User, conf.Database.Password, conf.Database.Host, conf.Database.Port, conf.Database.DbName, conf.Database.Ssl)
 }
 
-func postgresValidateConfig(conf *db.DbConfig) error {
+func validateDb(conf *ezconfig.DbConfig) error {
 	if conf.Database.Host == "" {
 		return errors.New("Host not specified")
 	}
@@ -44,7 +44,7 @@ func postgresValidateConfig(conf *db.DbConfig) error {
 	return nil
 }
 
-func postgresInitDb(conf *db.DbConfig) (*sql.DB, error) {
+func initDb(conf *ezconfig.DbConfig) (*sql.DB, error) {
 	connStr := getPostgresConnectionsString(conf)
 	return sql.Open("postgres", connStr)
 }

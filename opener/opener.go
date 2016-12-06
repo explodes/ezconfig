@@ -4,16 +4,17 @@ import (
 	"database/sql"
 	"sync"
 
-	"github.com/explodes/ezconfig/backoff"
-	"github.com/explodes/ezconfig/db"
-	"github.com/explodes/ezconfig/producer"
 	"io"
+
+	"github.com/explodes/ezconfig"
+	"github.com/explodes/ezconfig/backoff"
+	"github.com/explodes/ezconfig/producer"
 )
 
 type Opener struct {
 	file           string
-	dbConfig       *db.DbConfig
-	producerConfig *producer.ProducerConfig
+	dbConfig       *ezconfig.DbConfig
+	producerConfig *ezconfig.ProducerConfig
 	retries        int
 	backoff        backoff.Strategy
 }
@@ -33,12 +34,12 @@ func (co *Opener) WithRetry(retries int, strategy backoff.Strategy) *Opener {
 	return co
 }
 
-func (co *Opener) WithDatabase(config *db.DbConfig) *Opener {
+func (co *Opener) WithDatabase(config *ezconfig.DbConfig) *Opener {
 	co.dbConfig = config
 	return co
 }
 
-func (co *Opener) WithProducer(config *producer.ProducerConfig) *Opener {
+func (co *Opener) WithProducer(config *ezconfig.ProducerConfig) *Opener {
 	co.producerConfig = config
 	return co
 }
@@ -71,7 +72,7 @@ func (co *Opener) Connect() (*Connections, error) {
 }
 
 func (co *Opener) connectDb(result *Connections) error {
-	database, err := db.InitDb(co.dbConfig, co.retries, co.backoff)
+	database, err := InitDb(co.dbConfig, co.retries, co.backoff)
 	if err != nil {
 		return err
 	} else {
@@ -81,7 +82,7 @@ func (co *Opener) connectDb(result *Connections) error {
 }
 
 func (co *Opener) connectBroker(result *Connections) error {
-	prod, err := producer.InitProducer(co.producerConfig, co.retries, co.backoff)
+	prod, err := InitProducer(co.producerConfig, co.retries, co.backoff)
 	if err != nil {
 		return err
 	} else {

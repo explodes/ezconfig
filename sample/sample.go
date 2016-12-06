@@ -4,19 +4,19 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"errors"
-
 	"github.com/explodes/ezconfig"
 	"github.com/explodes/ezconfig/backoff"
-	"github.com/explodes/ezconfig/db"
+	_ "github.com/explodes/ezconfig/db/pg"
 	"github.com/explodes/ezconfig/opener"
 	"github.com/explodes/ezconfig/producer"
+	_ "github.com/explodes/ezconfig/producer/dummy"
 	"github.com/explodes/jsonserv"
 )
 
@@ -38,8 +38,8 @@ type ServerConfig struct {
 }
 
 type Config struct {
-	producer.ProducerConfig
-	db.DbConfig
+	ezconfig.ProducerConfig
+	ezconfig.DbConfig
 	Server ServerConfig
 }
 
@@ -66,14 +66,14 @@ func readConfig() *App {
 		log.Fatal(err)
 	}
 
-	connections := opener.New().
+	connections, err := opener.New().
 		WithRetry(connectionRetries, backoff.Exponential(10*time.Millisecond, 1*time.Second, 2)).
 		WithDatabase(&config.DbConfig).
 		WithProducer(&config.ProducerConfig).
 		Connect()
 
-	if connections.Err != nil {
-		log.Fatalf("Unable to connect: %v", connections.Err)
+	if err != nil {
+		log.Fatalf("Unable to connect: %v", err)
 	}
 
 	return &App{
